@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Forever Blooming Flowers</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html, body {
+    width: 100%;
+    height: 100dvh;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at 24% 18%, rgba(255, 190, 95, 0.13) 0%, transparent 42%),
+      radial-gradient(circle at 52% 18%, rgba(165, 190, 255, 0.10) 0%, transparent 42%),
+      radial-gradient(circle at 42% 45%, #1d162b 0%, #100c1c 58%, #07050e 100%);
+    user-select: none;
+    touch-action: none;
+  }
+
+  canvas {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    display: block;
+    filter: drop-shadow(0 0 18px rgba(255, 115, 160, 0.14));
+  }
+
+  /* Intro Start Overlay */
+  #intro-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(7, 5, 14, 0.86);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    transition: opacity 0.9s ease, visibility 0.9s ease;
+    padding: 24px;
+    text-align: center;
+  }
+
+  #intro-overlay.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  #start-btn {
+    background: rgba(255, 143, 177, 0.12);
+    border: 1px solid rgba(255, 179, 193, 0.45);
+    color: #ffd6e0;
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-style: italic;
+    font-size: clamp(22px, 5vw, 28px);
+    padding: 14px 34px;
+    border-radius: 999px;
+    cursor: pointer;
+    box-shadow: 0 0 25px rgba(255, 117, 143, 0.28);
+    transition: transform 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
+  }
+
+  #start-btn:hover, #start-btn:active {
+    transform: scale(1.04);
+    background: rgba(255, 143, 177, 0.22);
+    box-shadow: 0 0 35px rgba(255, 117, 143, 0.5);
+  }
+
+  #intro-hint {
+    margin-top: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(183, 228, 199, 0.6);
+  }
+
+  /* Sound Toggle Button */
+  #sound-toggle {
+    position: fixed;
+    top: max(14px, env(safe-area-inset-top));
+    right: max(14px, env(safe-area-inset-right));
+    z-index: 30;
+    background: rgba(16, 12, 28, 0.65);
+    border: 1px solid rgba(255, 179, 193, 0.3);
+    color: #ffd6e0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    transition: opacity 1s ease;
+  }
+
+  #sound-toggle.visible {
+    opacity: 1;
+  }
+
+  /* Right-Side Paragraph Container (Desktop) */
+  #letter-panel {
+    position: fixed;
+    right: 6vw;
+    top: 50%;
+    transform: translateY(-48%);
+    width: min(420px, 38vw);
+    padding: 28px 30px;
+    border-radius: 18px;
+    background: linear-gradient(145deg, rgba(22, 16, 36, 0.62), rgba(11, 8, 20, 0.48));
+    border: 1px solid rgba(255, 179, 193, 0.22);
+    box-shadow:
+      0 12px 40px rgba(0, 0, 0, 0.45),
+      inset 0 0 24px rgba(255, 143, 177, 0.05);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 20;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 1.4s ease, transform 1.4s ease;
+  }
+
+  #letter-panel.visible {
+    opacity: 1;
+    transform: translateY(-50%);
+  }
+
+  #letter-header {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: rgba(255, 214, 102, 0.8);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  #letter-body {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-style: italic;
+    font-size: clamp(19px, 2.1vw, 24px);
+    line-height: 1.55;
+    letter-spacing: 0.4px;
+    color: #ffe5ec;
+    text-shadow: 0 0 14px rgba(255, 117, 143, 0.35);
+    min-height: 140px;
+  }
+
+  #cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1.1em;
+    background-color: #ff8fa3;
+    vertical-align: text-bottom;
+    margin-left: 3px;
+    box-shadow: 0 0 8px #ff8fa3;
+    animation: blink 0.9s steps(2, start) infinite;
+  }
+
+  #cursor.done {
+    opacity: 0;
+    animation: none;
+    transition: opacity 1.2s ease;
+  }
+
+  #interaction-hint {
+    margin-top: 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(183, 228, 199, 0.55);
+    opacity: 0;
+    transition: opacity 1.5s ease;
+  }
+
+  #interaction-hint.visible {
+    opacity: 1;
+  }
+
+  /* Mobile Portrait Adjustment: Dock neatly below the tree */
+  @media (max-width: 820px) {
+    #letter-panel {
+      left: 5vw;
+      right: 5vw;
+      top: auto;
+      bottom: max(16px, env(safe-area-inset-bottom));
+      width: auto;
+      padding: 18px 20px;
+      transform: translateY(12px);
+    }
+
+    #letter-panel.visible {
+      transform: translateY(0);
+    }
+
+    #letter-body {
+      font-size: clamp(16.5px, 4.3vw, 20px);
+      line-height: 1.45;
+      min-height: 92px;
+    }
+
+    #letter-header {
+      margin-bottom: 8px;
+      font-size: 10px;
+    }
+
+    #interaction-hint {
+      margin-top: 10px;
+      font-size: 9px;
+    }
+  }
+
+  @keyframes blink {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div id="intro-overlay">
+  <button id="start-btn">☀ Tap to Bloom ☾</button>
+  <div id="intro-hint">sound &amp; animation</div>
+</div>
+
+<button id="sound-toggle">♪ Music: On</button>
+
+<canvas id="canvas"></canvas>
+
+<div id="letter-panel">
+  <div id="letter-header"><span>☀</span> <span>&amp;</span> <span>☾</span></div>
+  <div id="letter-body"><span id="typed-text"></span><span id="cursor"></span></div>
+  <div id="interaction-hint">drag for breeze · tap for petals</div>
+</div>
+
+<script>
+// ============================================================
+// CUSTOMIZE YOUR PARAGRAPH HERE:
+// ============================================================
+const MESSAGE_PARAGRAPH =
+  "I wanted to make this so you had flowers that never dried out, just like my love for you. Wherever you are, I hope you can feel the warmth of the sun and the gentle glow of the moon, and know that I'll always be here to support you through everything. I love you to the moon and back.";
+// ============================================================
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const introOverlay = document.getElementById('intro-overlay');
+const startBtn = document.getElementById('start-btn');
+const letterPanel = document.getElementById('letter-panel');
+const typedTextEl = document.getElementById('typed-text');
+const cursorEl = document.getElementById('cursor');
+const interactionHint = document.getElementById('interaction-hint');
+const soundToggle = document.getElementById('sound-toggle');
+
+// Responsive Grid Sizing for Both Desktop & Mobile Screens
+let CHAR_W = 7;
+let CHAR_H = 11;
+let cols = 120;
+let rows = 68;
+let treeScale = 1;
+let isMobileLayout = false;
+let dpr = 1;
+
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  isMobileLayout = w <= 820;
+
+  CHAR_W = isMobileLayout ? 5.6 : 7.2;
+  CHAR_H = isMobileLayout ? 9.2 : 11.5;
+
+  cols = Math.ceil(w / CHAR_W);
+  rows = Math.ceil(h / CHAR_H);
+
+  if (isMobileLayout) {
+    // Fit comfortably in the upper portion above the bottom paragraph card
+    const widthFit = (cols * 0.44) / 36;
+    const heightFit = (rows * 0.19) / 21;
+    treeScale = Math.max(0.48, Math.min(0.95, Math.min(widthFit, heightFit)));
+  } else {
+    // Fit cleanly on the left half of desktop screens
+    const widthFit = (cols * 0.27) / 36;
+    const heightFit = (rows * 0.25) / 21;
+    treeScale = Math.max(0.58, Math.min(1.15, Math.min(widthFit, heightFit)));
+  }
+
+  canvas.width = Math.floor(w * dpr);
+  canvas.height = Math.floor(h * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const fontSize = isMobileLayout ? 9 : 11;
+  ctx.font = `bold ${fontSize}px "JetBrains Mono", "Courier New", monospace`;
+  ctx.textBaseline = 'top';
+}
+window.addEventListener('resize', resize);
+resize();
+
+// --- TYPEWRITER EFFECT FOR RIGHT-SIDE PARAGRAPH ---
+function startTypewriter() {
+  letterPanel.classList.add('visible');
+  let index = 0;
+
+  function typeNextChar() {
+    if (index < MESSAGE_PARAGRAPH.length) {
+      const ch = MESSAGE_PARAGRAPH[index];
+      typedTextEl.textContent += ch;
+      index++;
+
+      // Natural human-like pause on commas, dashes, and periods
+      let delay = 36 + Math.random() * 22;
+      if (ch === ',' || ch === '—') delay = 260;
+      else if (ch === '.' || ch === '!' || ch === '?') delay = 420;
+
+      setTimeout(typeNextChar, delay);
+    } else {
+      cursorEl.classList.add('done');
+      interactionHint.classList.add('visible');
+    }
+  }
+
+  setTimeout(typeNextChar, 500);
+}
+
+// --- AMBIENT MUSIC SYNTHESIZER (WEB AUDIO API) ---
+let audioCtx = null;
+let isMuted = false;
+
+function startMusic() {
+  if (audioCtx) return;
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  audioCtx = new AudioContext();
+
+  const scale = [
+    261.63, 293.66, 329.63, 349.23, 392.00,
+    440.00, 523.25, 587.33, 659.25, 783.99
+  ];
+
+  const padFreqs = [174.61, 261.63, 329.63];
+  const masterGain = audioCtx.createGain();
+  masterGain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+  masterGain.gain.exponentialRampToValueAtTime(0.18, audioCtx.currentTime + 3.0);
+  masterGain.connect(audioCtx.destination);
+  window._masterGain = masterGain;
+
+  padFreqs.forEach(freq => {
+    const osc = audioCtx.createOscillator();
+    const oscGain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    oscGain.gain.value = 0.08;
+    osc.connect(oscGain);
+    oscGain.connect(masterGain);
+    osc.start();
+  });
+
+  let step = 0;
+  const pattern = [0, 2, 4, 6, 7, 6, 4, 2, 1, 3, 5, 8, 7, 5, 3, 1];
+  setInterval(() => {
+    if (!audioCtx || isMuted) return;
+    const now = audioCtx.currentTime;
+    const noteIdx = pattern[step % pattern.length];
+    const freq = scale[noteIdx];
+
+    const osc = audioCtx.createOscillator();
+    const noteGain = audioCtx.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(freq, now);
+
+    noteGain.gain.setValueAtTime(0.0001, now);
+    noteGain.gain.linearRampToValueAtTime(0.14, now + 0.08);
+    noteGain.gain.exponentialRampToValueAtTime(0.0001, now + 2.6);
+
+    osc.connect(noteGain);
+    noteGain.connect(masterGain);
+
+    osc.start(now);
+    osc.stop(now + 2.7);
+    step++;
+  }, 680);
+}
+
+soundToggle.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (!audioCtx) return;
+  isMuted = !isMuted;
+  if (isMuted) {
+    window._masterGain.gain.setTargetAtTime(0.0001, audioCtx.currentTime, 0.2);
+    soundToggle.textContent = '♪ Music: Off';
+  } else {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    window._masterGain.gain.setTargetAtTime(0.18, audioCtx.currentTime, 0.4);
+    soundToggle.textContent = '♪ Music: On';
+  }
+});
+
+// --- SCENE GENERATION ---
+let mouseWind = 0;
+let targetMouseWind = 0;
+
+function updateWindFromClientX(clientX) {
+  const norm = (clientX / window.innerWidth) * 2 - 1;
+  targetMouseWind = norm * 2.4;
+}
+
+window.addEventListener('mousemove', (e) => updateWindFromClientX(e.clientX));
+window.addEventListener('touchmove', (e) => {
+  if (e.touches.length > 0) updateWindFromClientX(e.touches[0].clientX);
+}, { passive: true });
+
+// 1. Stars across full screen
+const stars = Array.from({ length: 120 }, () => ({
+  nx: Math.random(),
+  ny: Math.random() * 0.72,
+  phase: Math.random() * Math.PI * 2,
+  speed: 1.4 + Math.random() * 2.4,
+  char: Math.random() > 0.75 ? '+' : (Math.random() > 0.4 ? '·' : '.')
+}));
+
+// 2. Full-width Meadow Grass
+const grassBlades = Array.from({ length: 560 }, () => ({
+  nx: Math.random(),
+  nyOffset: Math.random(),
+  phase: Math.random() * Math.PI * 2,
+  shade: ['#1b4332', '#2d6a4f', '#40916c', '#52b788'][Math.floor(Math.random() * 4)]
+}));
+
+// 3. 3D Volumetric Foliage Canopy
+const foliage = [];
+const leafChars = ['&', '%', '#', '@', 'w', 'v', '*', '~', 'm'];
+for (let i = 0; i < 1650; i++) {
+  const u = Math.random();
+  const v = Math.random();
+  const theta = u * 2.0 * Math.PI;
+  const phi = Math.acos(2.0 * v - 1.0);
+  const r = Math.cbrt(Math.random());
+
+  const nx = r * Math.sin(phi) * Math.cos(theta);
+  const ny = r * Math.sin(phi) * Math.sin(theta);
+  const nz = r * Math.cos(phi);
+
+  const light = (-nx * 0.45 - ny * 0.65 + nz * 0.6 + 1) / 2;
+  let color;
+  if (light < 0.32) color = '#081c15';
+  else if (light < 0.48) color = '#1b4332';
+  else if (light < 0.64) color = '#2d6a4f';
+  else if (light < 0.80) color = '#40916c';
+  else color = '#74c69d';
+
+  foliage.push({
+    ox: nx * 36,
+    oy: ny * 21,
+    oz: nz,
+    char: leafChars[Math.floor(Math.random() * leafChars.length)],
+    color,
+    phase: Math.random() * Math.PI * 2
+  });
+}
+foliage.sort((a, b) => a.oz - b.oz);
+
+// 4. Garden Rose Clusters
+const roseClusters = [
+  { ox: -18, oy: -12, size: 4.6, tilt: -0.3, delay: 0.05 },
+  { ox: -7,  oy: -15, size: 4.2, tilt: 0.1,  delay: 0.15 },
+  { ox: 5,   oy: -14, size: 4.5, tilt: 0.2,  delay: 0.10 },
+  { ox: 19,  oy: -11, size: 4.4, tilt: 0.4,  delay: 0.20 },
+  { ox: -24, oy: -3,  size: 4.3, tilt: -0.4, delay: 0.25 },
+  { ox: -11, oy: -5,  size: 5.0, tilt: -0.1, delay: 0.00 },
+  { ox: 2,   oy: -4,  size: 5.2, tilt: 0.15, delay: 0.08 },
+  { ox: 15,  oy: -3,  size: 4.8, tilt: 0.3,  delay: 0.18 },
+  { ox: 26,  oy: -1,  size: 4.0, tilt: 0.5,  delay: 0.28 },
+  { ox: -26, oy: 7,   size: 3.9, tilt: -0.3, delay: 0.30 },
+  { ox: -14, oy: 6,   size: 4.7, tilt: -0.15,delay: 0.12 },
+  { ox: -2,  oy: 8,   size: 4.9, tilt: 0.05, delay: 0.04 },
+  { ox: 12,  oy: 6,   size: 5.1, tilt: 0.2,  delay: 0.16 },
+  { ox: 23,  oy: 8,   size: 4.3, tilt: 0.35, delay: 0.24 },
+  { ox: -15, oy: -17, size: 2.0, tilt: -0.2, delay: 0.32 },
+  { ox: 12,  oy: -17, size: 2.1, tilt: 0.2,  delay: 0.34 },
+  { ox: -30, oy: 1,   size: 2.0, tilt: -0.5, delay: 0.36 },
+  { ox: 29,  oy: 4,   size: 2.1, tilt: 0.5,  delay: 0.38 },
+  { ox: -6,  oy: 14,  size: 2.2, tilt: 0.0,  delay: 0.35 }
+];
+
+const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
+roseClusters.forEach(rose => {
+  rose.petals = [];
+  const count = Math.floor(rose.size * 18);
+  for (let i = 0; i < count; i++) {
+    const frac = i / count;
+    const radius = Math.sqrt(frac) * rose.size;
+    const angle = i * GOLDEN_ANGLE;
+    const px = Math.cos(angle) * radius;
+    const py = Math.sin(angle) * radius;
+
+    const light = (-px / rose.size) * 0.45 + (-py / rose.size) * 0.45 + frac * 0.5;
+    let color, char;
+    if (frac < 0.14) { color = '#800f2f'; char = '@'; }
+    else if (light > 0.55) { color = '#ffe5ec'; char = i % 2 === 0 ? '(' : ')'; }
+    else if (light > 0.28) { color = '#ffb3c1'; char = i % 3 === 0 ? 'c' : 'o'; }
+    else if (light > 0.02) { color = '#ff758f'; char = i % 2 === 0 ? '0' : 'e'; }
+    else { color = '#c9184a'; char = '#'; }
+
+    rose.petals.push({ px, py, color, char, frac });
+  }
+});
+
+// 5. Petals & Fireflies
+const petals = Array.from({ length: 45 }, () => createPetal(true));
+const fireflies = Array.from({ length: 30 }, () => ({
+  nx: Math.random(),
+  ny: Math.random() * 0.84,
+  vx: (Math.random() - 0.5) * 0.0012,
+  vy: (Math.random() - 0.5) * 0.0008,
+  phase: Math.random() * Math.PI * 2
+}));
+
+function getTreeCenterCol() {
+  return isMobileLayout ? Math.floor(cols * 0.5) : Math.floor(cols * 0.31);
+}
+
+function createPetal(randomY = false) {
+  const centerCol = getTreeCenterCol();
+  return {
+    x: centerCol + (Math.random() - 0.5) * (65 * treeScale),
+    y: randomY ? Math.random() * rows : (rows * 0.38) + (Math.random() - 0.5) * (20 * treeScale),
+    speedY: 0.04 + Math.random() * 0.07,
+    swayAmp: 0.06 + Math.random() * 0.1,
+    phase: Math.random() * Math.PI * 2,
+    char: ['*', 'o', '~', 'v'][Math.floor(Math.random() * 4)],
+    color: ['#ffb3c1', '#ff8fa3', '#ff758f', '#ffd6e0'][Math.floor(Math.random() * 4)]
+  };
+}
+
+function burstPetalsAt(clientX, clientY) {
+  const gx = clientX / CHAR_W;
+  const gy = clientY / CHAR_H;
+  for (let i = 0; i < 16; i++) {
+    const p = createPetal(false);
+    p.x = gx + (Math.random() - 0.5) * 6;
+    p.y = gy + (Math.random() - 0.5) * 4;
+    p.speedY = 0.06 + Math.random() * 0.1;
+    petals.push(p);
+  }
+  if (petals.length > 150) petals.splice(0, 16);
+}
+
+window.addEventListener('click', (e) => {
+  if (!hasStarted) return;
+  burstPetalsAt(e.clientX, e.clientY);
+});
+
+window.addEventListener('touchstart', (e) => {
+  if (!hasStarted || e.touches.length === 0) return;
+  burstPetalsAt(e.touches[0].clientX, e.touches[0].clientY);
+}, { passive: true });
+
+// --- OPENING BLOOM ANIMATION STATE ---
+let hasStarted = false;
+let bloomStartTime = 0;
+
+function easeOutCubic(x) {
+  return 1 - Math.pow(1 - x, 3);
+}
+
+function easeOutBack(x) {
+  const c1 = 1.70158;
+  const c3 = c1 + 1;
+  return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
+}
+
+startBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  hasStarted = true;
+  bloomStartTime = performance.now();
+  introOverlay.classList.add('hidden');
+  soundToggle.classList.add('visible');
+  startMusic();
+
+  // Start typing out the paragraph after the tree finishes blooming
+  setTimeout(startTypewriter, 2500);
+});
+
+// --- DRAW SUN & MOON TOGETHER IN CELESTIAL EMBRACE ---
+function drawSunAndMoon(cx, skyY, skyProg, t) {
+  if (skyProg <= 0.02) return;
+
+  const riseOffset = (1 - easeOutCubic(skyProg)) * 4;
+  const centerX = cx;
+  const centerY = skyY + riseOffset;
+
+  // 1. RADIANT SUN
+  const sunX = centerX - 4.2;
+  const sunY = centerY - 0.3;
+  const pulse = Math.sin(t * 2.2);
+
+  const rayAngles = 16;
+  for (let i = 0; i < rayAngles; i++) {
+    const angle = (i / rayAngles) * Math.PI * 2 + t * 0.18;
+    const isLong = i % 2 === 0;
+    const dist = (isLong ? 6.2 : 4.8) + (isLong ? pulse * 0.5 : -pulse * 0.3);
+    const rx = Math.round(sunX + Math.cos(angle) * dist * 1.55);
+    const ry = Math.round(sunY + Math.sin(angle) * dist * 0.88);
+
+    const rayAlpha = skyProg * (isLong ? 0.72 : 0.45);
+    ctx.fillStyle = `rgba(255, 209, 102, ${rayAlpha.toFixed(2)})`;
+    const rayChar = isLong ? (Math.abs(Math.cos(angle)) > 0.7 ? '-' : (Math.sin(angle) * Math.cos(angle) > 0 ? '\\' : '/')) : '·';
+    ctx.fillText(rayChar, rx * CHAR_W, ry * CHAR_H);
+  }
+
+  for (let dy = -3; dy <= 3; dy++) {
+    for (let dx = -5; dx <= 5; dx++) {
+      const dist = Math.sqrt((dx / 1.55) ** 2 + (dy / 0.88) ** 2);
+      if (dist <= 3.3) {
+        const px = Math.round(sunX + dx);
+        const py = Math.round(sunY + dy);
+        if (dist < 1.6) {
+          ctx.fillStyle = `rgba(255, 243, 176, ${(0.95 * skyProg).toFixed(2)})`;
+          ctx.fillText('@', px * CHAR_W, py * CHAR_H);
+        } else if (dist < 2.5) {
+          ctx.fillStyle = `rgba(255, 195, 0, ${(0.88 * skyProg).toFixed(2)})`;
+          ctx.fillText('#', px * CHAR_W, py * CHAR_H);
+        } else {
+          ctx.fillStyle = `rgba(255, 149, 0, ${(0.72 * skyProg).toFixed(2)})`;
+          ctx.fillText('*', px * CHAR_W, py * CHAR_H);
+        }
+      }
+    }
+  }
+
+  // 2. CRESCENT MOON
+  const moonX = centerX + 3.2;
+  const moonY = centerY + 0.3;
+
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2 - t * 0.12;
+    const hx = Math.round(moonX + Math.cos(a) * 5.2 * 1.5);
+    const hy = Math.round(moonY + Math.sin(a) * 5.2 * 0.88);
+    ctx.fillStyle = `rgba(218, 226, 255, ${(0.32 * skyProg).toFixed(2)})`;
+    ctx.fillText('·', hx * CHAR_W, hy * CHAR_H);
+  }
+
+  for (let dy = -3; dy <= 3; dy++) {
+    for (let dx = -5; dx <= 5; dx++) {
+      const nx = dx / 1.55;
+      const ny = dy / 0.88;
+      const distMain = Math.sqrt(nx * nx + ny * ny);
+      const distCut = Math.sqrt((nx + 1.15) ** 2 + (ny + 0.25) ** 2);
+
+      if (distMain <= 3.1 && distCut >= 2.35) {
+        const px = Math.round(moonX + dx);
+        const py = Math.round(moonY + dy);
+        const isRim = distMain > 2.4 || distCut < 2.75;
+        ctx.fillStyle = isRim
+          ? `rgba(248, 250, 255, ${(0.96 * skyProg).toFixed(2)})`
+          : `rgba(199, 210, 254, ${(0.88 * skyProg).toFixed(2)})`;
+        ctx.fillText(isRim ? '(' : 'o', px * CHAR_W, py * CHAR_H);
+      }
+    }
+  }
+
+  const sparkAlpha = skyProg * (0.65 + 0.35 * Math.sin(t * 3.5));
+  ctx.fillStyle = `rgba(255, 255, 255, ${sparkAlpha.toFixed(2)})`;
+  ctx.fillText('✦', Math.round(centerX - 0.5) * CHAR_W, Math.round(centerY - 2.6) * CHAR_H);
+}
+
+let t = 0;
+
+function draw(now) {
+  ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+  mouseWind += (targetMouseWind - mouseWind) * 0.05;
+
+  const elapsed = hasStarted ? (now - bloomStartTime) / 1000 : 0;
+  const skyProg = hasStarted ? Math.min(1, elapsed / 1.1) : 0.3;
+  const trunkProg = hasStarted ? easeOutCubic(Math.min(1, Math.max(0, (elapsed - 0.2) / 1.3))) : 0;
+  const canopyProg = hasStarted ? easeOutBack(Math.min(1, Math.max(0, (elapsed - 0.9) / 1.6))) : 0;
+  const roseBaseProg = hasStarted ? Math.min(1, Math.max(0, (elapsed - 1.7) / 1.8)) : 0;
+
+  // On desktop, center the tree on the left (31% X) so the paragraph sits cleanly on the right
+  const cx = getTreeCenterCol();
+  const crownY = isMobileLayout ? Math.floor(rows * 0.36) : Math.floor(rows * 0.44);
+  const groundY = isMobileLayout ? Math.floor(rows * 0.69) : Math.floor(rows * 0.85);
+  const wind = Math.sin(t * 1.2) * 1.2 + mouseWind;
+
+  // --- LAYER 1: TWILIGHT STARS ---
+  for (const s of stars) {
+    const alpha = skyProg * (0.25 + 0.75 * Math.abs(Math.sin(t * s.speed + s.phase)));
+    ctx.fillStyle = `rgba(235, 225, 255, ${alpha.toFixed(2)})`;
+    ctx.fillText(s.char, Math.round(s.nx * cols) * CHAR_W, Math.round(s.ny * rows) * CHAR_H);
+  }
+
+  // --- LAYER 1B: SUN & MOON TOGETHER ---
+  const celestialY = Math.max(5, Math.floor(rows * 0.11));
+  drawSunAndMoon(cx, celestialY, skyProg, t);
+
+  // --- LAYER 2: DISTANT ROLLING HORIZON HILLS ---
+  if (skyProg > 0.05) {
+    for (let x = 0; x < cols; x++) {
+      const hill1 = Math.sin(x * 0.045 + 0.5) * 3.0 + Math.cos(x * 0.02) * 2.0;
+      const hillY = Math.floor(groundY - 3 + hill1);
+      ctx.fillStyle = '#142129';
+      ctx.fillText('~', x * CHAR_W, hillY * CHAR_H);
+      for (let y = hillY + 1; y < groundY; y++) {
+        ctx.fillStyle = '#0f1a20';
+        ctx.fillText('.', x * CHAR_W, y * CHAR_H);
+      }
+    }
+  }
+
+  // --- LAYER 3: GROWING WOODY TRUNK & BRANCHES ---
+  if (trunkProg > 0) {
+    const trunkTopY = Math.round(crownY + 11 * treeScale);
+    const totalHeight = (groundY + 1) - trunkTopY;
+    const currentTopY = Math.round((groundY + 1) - totalHeight * trunkProg);
+
+    for (let y = currentTopY; y <= groundY + 1; y++) {
+      const p = (y - trunkTopY) / Math.max(1, totalHeight);
+      const curve = Math.sin(p * Math.PI * 1.15) * (2.2 * treeScale) + wind * (1 - p) * 0.55;
+      const baseHalf = p > 0.88 ? 2.6 : (p > 0.75 ? 1.8 : 1.3);
+      const halfWidth = baseHalf * treeScale;
+
+      for (let dx = -Math.ceil(halfWidth); dx <= Math.ceil(halfWidth); dx++) {
+        if (Math.abs(dx) > halfWidth) continue;
+        const px = Math.round(cx + curve + dx);
+
+        let barkCol = '#4a3228';
+        let barkCh = '|';
+        if (dx < 0) { barkCol = '#7f5539'; barkCh = '('; }
+        else if (dx > 0) { barkCol = '#2b1b17'; barkCh = ')'; }
+        else { barkCh = (y % 3 === 0) ? '#' : ':'; }
+
+        ctx.fillStyle = barkCol;
+        ctx.fillText(barkCh, px * CHAR_W, y * CHAR_H);
+      }
+    }
+
+    if (trunkProg > 0.85) {
+      const branches = [
+        { dx: -10, dy: -6 }, { dx: -4, dy: -8 },
+        { dx: 5, dy: -7 },   { dx: 11, dy: -5 }
+      ];
+      branches.forEach(b => {
+        for (let s = 1; s <= 8; s++) {
+          const frac = s / 8;
+          const bx = Math.round(cx + b.dx * treeScale * frac + wind * 0.7);
+          const by = Math.round(trunkTopY + 1 + b.dy * treeScale * frac);
+          ctx.fillStyle = '#3d261c';
+          ctx.fillText(b.dx < 0 ? '\\' : '/', bx * CHAR_W, by * CHAR_H);
+        }
+      });
+    }
+  }
+
+  // --- LAYER 4: MEADOW GRASS FLOOR ---
+  for (const g of grassBlades) {
+    const gy = Math.floor(groundY + g.nyOffset * (rows - groundY));
+    if (gy >= rows) continue;
+    const gxBase = g.nx * cols;
+    const gSway = Math.sin(t * 2.0 + g.phase + gxBase * 0.1) * 0.6 + wind * 0.35;
+    const gx = Math.round(gxBase + gSway);
+    ctx.fillStyle = g.shade;
+    const ch = gSway > 0.3 ? '/' : (gSway < -0.3 ? '\\' : '|');
+    ctx.fillText(ch, gx * CHAR_W, gy * CHAR_H);
+  }
+
+  // --- LAYER 5: EXPANDING VOLUMETRIC LEAF CANOPY ---
+  if (canopyProg > 0.01) {
+    const scale = treeScale * canopyProg;
+    for (const f of foliage) {
+      const swayFactor = 0.7 + (1 - (f.oy + 21) / 42) * 0.5;
+      const flutter = Math.sin(t * 2.1 + f.phase) * 0.45;
+      const px = Math.round(cx + f.ox * scale + wind * swayFactor + flutter);
+      const py = Math.round(crownY + f.oy * scale + Math.cos(t * 1.5 + f.phase) * 0.2);
+
+      ctx.fillStyle = f.color;
+      ctx.fillText(f.char, px * CHAR_W, py * CHAR_H);
+    }
+  }
+
+  // --- LAYER 6: SPIRALING BLOOMING GARDEN ROSES ---
+  if (roseBaseProg > 0.01) {
+    for (const rose of roseClusters) {
+      const localProg = easeOutBack(Math.min(1, Math.max(0, (roseBaseProg - rose.delay) / 0.65)));
+      if (localProg <= 0.02) continue;
+
+      const rx = cx + rose.ox * treeScale + wind * 1.05;
+      const ry = crownY + rose.oy * treeScale + Math.sin(t * 1.6 + rose.ox * 0.2) * 0.3;
+      const rScale = treeScale * localProg;
+
+      for (let a = 0; a < Math.PI * 2; a += 0.55) {
+        const hx = Math.round(rx + Math.cos(a) * (rose.size * 1.48 * rScale));
+        const hy = Math.round(ry + Math.sin(a) * (rose.size * 0.92 * rScale));
+        ctx.fillStyle = '#0b251c';
+        ctx.fillText('%', hx * CHAR_W, hy * CHAR_H);
+      }
+
+      const spin = Math.sin(t * 0.8 + rose.tilt) * 0.12 + (1 - localProg) * 1.4;
+      for (const p of rose.petals) {
+        if (p.frac > localProg) continue;
+        const rotX = p.px * Math.cos(spin) - p.py * Math.sin(spin);
+        const rotY = p.px * Math.sin(spin) + p.py * Math.cos(spin);
+
+        const px = Math.round(rx + rotX * 1.45 * rScale);
+        const py = Math.round(ry + rotY * 0.88 * rScale);
+
+        ctx.fillStyle = p.color;
+        ctx.fillText(p.char, px * CHAR_W, py * CHAR_H);
+      }
+    }
+  }
+
+  // --- LAYER 7: DRIFTING ROSE PETALS ---
+  if (roseBaseProg > 0.4) {
+    for (let i = 0; i < petals.length; i++) {
+      const p = petals[i];
+      p.y += p.speedY;
+      p.x += Math.sin(t * 1.5 + p.phase) * p.swayAmp + wind * 0.04;
+
+      if (p.y >= rows - 1) {
+        petals[i] = createPetal(false);
+      }
+      ctx.fillStyle = p.color;
+      ctx.fillText(p.char, Math.round(p.x) * CHAR_W, Math.round(p.y) * CHAR_H);
+    }
+  }
+
+  // --- LAYER 8: GLOWING GOLDEN FIREFLIES ---
+  for (const f of fireflies) {
+    f.nx += f.vx + Math.sin(t * 0.9 + f.phase) * 0.0007 + wind * 0.0002;
+    f.ny += f.vy + Math.cos(t * 1.1 + f.phase) * 0.0005;
+
+    if (f.nx < 0.02) f.nx = 0.98;
+    if (f.nx > 0.98) f.nx = 0.02;
+    if (f.ny < 0.04) f.ny = 0.82;
+    if (f.ny > 0.84) f.ny = 0.05;
+
+    const glow = skyProg * (0.35 + 0.65 * Math.sin(t * 3.0 + f.phase));
+    if (glow > 0.2) {
+      ctx.fillStyle = `rgba(255, 225, 115, ${glow.toFixed(2)})`;
+      ctx.fillText(glow > 0.75 ? '✦' : '·', Math.round(f.nx * cols) * CHAR_W, Math.round(f.ny * rows) * CHAR_H);
+    }
+  }
+
+  t += 0.025;
+  requestAnimationFrame(draw);
+}
+
+requestAnimationFrame(draw);
+</script>
+</body>
+</html>
